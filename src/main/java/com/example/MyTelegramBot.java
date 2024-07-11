@@ -16,6 +16,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,6 +29,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     private final Map<String, String> favoriteAnime = new HashMap<>();
     private boolean waitingForAnime = false;
     private Anime currentAnime;
+    private Map<String, String> animeHashMap = new HashMap<>();
 
     public MyTelegramBot(String botUsername, String botToken) {
         this.botUsername = botUsername;
@@ -139,7 +143,8 @@ public class MyTelegramBot extends TelegramLongPollingBot {
                 menuRemoveFromFavorite(chatId);
             }
             else if (callbackData.startsWith("remove_favorite_")) {
-                String animeTitleForRemove = callbackData.substring("remove_favorite_".length());
+                String callbackHash = callbackData.substring("remove_favorite_".length());
+                String animeTitleForRemove = animeHashMap.get("remove_favorite_" + callbackHash);
                 removeFavoriteAnime(chatId, animeTitleForRemove);
             }
         }
@@ -175,7 +180,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         boolean hasFavorite = !favoriteAnime.isEmpty();
         if (hasFavorite) {
             for (Map.Entry<String, String> entry : favoriteAnime.entrySet()) {
-                messageText.append("- ").append(entry.getKey()).append(" ,ссылка: ").append(entry.getValue()).append("\n");
+                messageText.append("- ").append(entry.getKey()).append("\nСсылка: ").append(entry.getValue()).append("\n\n");
             }
         } else {
             messageText.append("В избранном пока нет аниме");
@@ -221,6 +226,22 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         sendFavoriteList(chatId);
     }
 
+    private String generateHash(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error generating hash", e);
+        }
+    }
+
     private void menuRemoveFromFavorite (String chatId) {
         StringBuilder messageText = new StringBuilder("Выберите аниме для удаления");
 
@@ -233,9 +254,21 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
 
         for(Map.Entry<String, String> entry : favoriteAnime.entrySet()) {
+            String animeTitle = entry.getKey();
+            String callbackData = "remove_favorite_" + generateHash(entry.getKey());
+
+            if (callbackData.length() > 63) {
+                callbackData = callbackData.substring(0, 63);
+            }
+            animeHashMap.put(callbackData, animeTitle);
+
+            System.out.println("Anime title: " + animeTitle);
+            System.out.println("Callback data: " + callbackData);
+
             InlineKeyboardButton removeFavoriteAnimeButton = new InlineKeyboardButton();
-            removeFavoriteAnimeButton.setText("Удалить \"" + entry.getKey() + "\"");
-            removeFavoriteAnimeButton.setCallbackData("remove_favorite_" + entry.getKey());
+            removeFavoriteAnimeButton.setText("Удалить \"" + animeTitle + "\"");
+            removeFavoriteAnimeButton.setCallbackData(callbackData);
+
             List<InlineKeyboardButton> rowInline = new ArrayList<>();
             rowInline.add(removeFavoriteAnimeButton);
             rowsInline.add(rowInline);
