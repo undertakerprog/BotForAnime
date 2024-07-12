@@ -140,9 +140,13 @@ public class MyTelegramBot extends TelegramLongPollingBot {
             int messageId = update.getCallbackQuery().getMessage().getMessageId();
 
             if (callbackData.startsWith("add_favorite")) {
-                String animeTitleForFavorite = currentAnime.getAnimeTitle();
-                String animeUrlForFavorite = currentAnime.getAnimeUrl();
-                addFavoriteAnime(chatId, animeTitleForFavorite, animeUrlForFavorite);
+                if (this.currentAnime != null) {
+                    String animeTitleForFavorite = this.currentAnime.getAnimeTitle();
+                    String animeUrlForFavorite = this.currentAnime.getAnimeUrl();
+                    addFavoriteAnime(chatId, animeTitleForFavorite, animeUrlForFavorite);
+                } else {
+                    System.err.println("currentAnime is null. Cannot add to favorites.");
+                }
             }
             else if (callbackData.startsWith("not_this_anime")) {
                 sendMessage(chatId, "Пожалуйста попробуйте еще раз и уточните название аниме или отправльте аниме ссылкой, так же, к сожалению, есть вероятность, что аниме нет на сайте ");
