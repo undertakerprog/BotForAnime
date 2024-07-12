@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -30,6 +31,10 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     private boolean waitingForAnime = false;
     private Anime currentAnime;
     private Map<String, String> animeHashMap = new HashMap<>();
+    private Map<String, User> users = new HashMap<>();
+    private User getUser (String userId) {
+        return users.computeIfAbsent(userId, id -> new User(id));
+    }
 
     public MyTelegramBot(String botUsername, String botToken) {
         this.botUsername = botUsername;
@@ -102,6 +107,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             String chatId = update.getMessage().getChatId().toString();
+            System.out.println("Received message from user " + chatId);
 
             if (waitingForAnime) {
                 waitingForAnime = false;
@@ -130,6 +136,8 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
             String chatId = update.getCallbackQuery().getMessage().getChatId().toString();
+            System.out.println("Received callback query from user " + chatId);
+            int messageId = update.getCallbackQuery().getMessage().getMessageId();
 
             if (callbackData.startsWith("add_favorite")) {
                 String animeTitleForFavorite = currentAnime.getAnimeTitle();
@@ -140,7 +148,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
                 sendMessage(chatId, "Пожалуйста попробуйте еще раз и уточните название аниме или отправльте аниме ссылкой, так же, к сожалению, есть вероятность, что аниме нет на сайте ");
             }
             else if (callbackData.startsWith("edit_favorite")) {
-                menuRemoveFromFavorite(chatId);
+                editFavorite(chatId, messageId);
             }
             else if (callbackData.startsWith("remove_favorite_")) {
                 String callbackHash = callbackData.substring("remove_favorite_".length());
@@ -175,11 +183,28 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void editFavorite(String chatId, int messageId) {
+        User user = getUser(chatId);
+        EditMessageText newMessage = new EditMessageText();
+        newMessage.setChatId(chatId);
+        newMessage.setMessageId(messageId);
+        newMessage.setText("Ваши избранные аниме: \n" + user.getFavoriteList());
+        newMessage.setDisableWebPagePreview(true);
+
+        try {
+            execute(newMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+
+        menuRemoveFromFavorite(chatId);
+    }
+
     private void sendFavoriteList(String chatId) {
+        User user = getUser(chatId);
         StringBuilder messageText = new StringBuilder("Ваши избранные аниме:\n");
-        boolean hasFavorite = !favoriteAnime.isEmpty();
-        if (hasFavorite) {
-            for (Map.Entry<String, String> entry : favoriteAnime.entrySet()) {
+        if (user.hasFavorite()) {
+            for (Map.Entry<String, String> entry : user.getFavoriteAnime().entrySet()) {
                 messageText.append("- ").append(entry.getKey()).append("\nСсылка: ").append(entry.getValue()).append("\n\n");
             }
         } else {
@@ -191,7 +216,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         message.setText(messageText.toString());
         message.setDisableWebPagePreview(true);
 
-        if(hasFavorite) {
+        if(user.hasFavorite()) {
             InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
             List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
             
@@ -216,12 +241,14 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
     private void addFavoriteAnime(String chatId, String animeTitle, String animeUrl) {
-        favoriteAnime.put(animeTitle, animeUrl);
+        User user = getUser(chatId);
+        user.addFavorite(animeTitle, animeUrl);
         sendMessage(chatId, "Аниме: " + animeTitle + " добавлено в избранное, ссылка: " + animeUrl);
     }
 
     private void removeFavoriteAnime(String chatId, String animeTitle) {
-        favoriteAnime.remove(animeTitle);
+        User user = getUser(chatId);
+        user.removeFavorite(animeTitle);
         sendMessage(chatId, "Аниме \"" + animeTitle + "\" удалено из избранного.");
         sendFavoriteList(chatId);
     }
@@ -243,6 +270,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
     private void menuRemoveFromFavorite (String chatId) {
+        User user = getUser(chatId);
         StringBuilder messageText = new StringBuilder("Выберите аниме для удаления");
 
         SendMessage message = new SendMessage();
@@ -253,7 +281,7 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
 
-        for(Map.Entry<String, String> entry : favoriteAnime.entrySet()) {
+        for(Map.Entry<String, String> entry : user.getFavoriteAnime().entrySet()) {
             String animeTitle = entry.getKey();
             String callbackData = "remove_favorite_" + generateHash(entry.getKey());
 
