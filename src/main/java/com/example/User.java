@@ -42,6 +42,11 @@ public class User {
         saveUserToDynamoDb();
     }
 
+    public void removeAllFavorite() {
+        favoriteAnime.clear();
+        saveUserToDynamoDb();
+    }
+
     public boolean hasFavorite() {
         return !favoriteAnime.isEmpty();
     }

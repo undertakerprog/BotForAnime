@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -15,6 +16,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import software.amazon.awssdk.services.dynamodb.endpoints.internal.Value;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -63,6 +65,24 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void clearInlineKeyboard(String chatId, int messageId) {
+        EditMessageReplyMarkup editMarkup = new EditMessageReplyMarkup();
+        editMarkup.setChatId(chatId);
+        editMarkup.setMessageId(messageId);
+
+        // Create an empty keyboard
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        markupInline.setKeyboard(new ArrayList<>());
+
+        editMarkup.setReplyMarkup(markupInline);
+
+        try {
+            execute(editMarkup);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void sendMessageWithButtons(String chatId, String messageText,
                                        String animeUrl, String animeTitle, int replyToMessageID) {
         SendMessage message = new SendMessage();
@@ -92,9 +112,9 @@ public class MyTelegramBot extends TelegramLongPollingBot {
             markupInline.setKeyboard(rowsInline);
 
             message.setReplyMarkup(markupInline);
-
             message.setDisableWebPagePreview(true);
             execute(message);
+
         } catch (TelegramApiException e) {
             System.err.println("Telegram API error: " + e.getMessage());
             e.printStackTrace();
@@ -144,12 +164,15 @@ public class MyTelegramBot extends TelegramLongPollingBot {
                     String animeTitleForFavorite = this.currentAnime.getAnimeTitle();
                     String animeUrlForFavorite = this.currentAnime.getAnimeUrl();
                     addFavoriteAnime(chatId, animeTitleForFavorite, animeUrlForFavorite);
+                    clearInlineKeyboard(chatId, messageId);
                 } else {
                     System.err.println("currentAnime is null. Cannot add to favorites.");
                 }
             }
             else if (callbackData.startsWith("not_this_anime")) {
-                sendMessage(chatId, "Пожалуйста попробуйте еще раз и уточните название аниме или отправльте аниме ссылкой, так же, к сожалению, есть вероятность, что аниме нет на сайте ");
+                sendMessage(chatId, "Пожалуйста попробуйте еще раз и уточните название аниме " +
+                        "или отправльте аниме ссылкой, так же, к сожалению, есть вероятность, что аниме нет на сайте ");
+                clearInlineKeyboard(chatId, messageId);
             }
             else if (callbackData.startsWith("edit_favorite")) {
                 editFavorite(chatId, messageId);
@@ -158,6 +181,9 @@ public class MyTelegramBot extends TelegramLongPollingBot {
                 String callbackHash = callbackData.substring("remove_favorite_".length());
                 String animeTitleForRemove = animeHashMap.get("remove_favorite_" + callbackHash);
                 removeFavoriteAnime(chatId, animeTitleForRemove);
+            }
+            else if (callbackData.startsWith("remove_all_favorite")) {
+                removeAllFavorite(chatId);
             }
         }
     }
@@ -257,6 +283,13 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         sendFavoriteList(chatId);
     }
 
+    private void removeAllFavorite(String chatId) {
+        User user = getUser(chatId);
+        user.removeAllFavorite();
+        sendMessage(chatId, "Все аниме удалено из избранного");
+        sendFavoriteList(chatId);
+    }
+
     private String generateHash(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -305,6 +338,14 @@ public class MyTelegramBot extends TelegramLongPollingBot {
             rowInline.add(removeFavoriteAnimeButton);
             rowsInline.add(rowInline);
         }
+
+        InlineKeyboardButton removeAllFavoriteButton = new InlineKeyboardButton();
+        removeAllFavoriteButton.setText("Удалить все");
+        removeAllFavoriteButton.setCallbackData("remove_all_favorite");
+
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+        rowInline.add(removeAllFavoriteButton);
+        rowsInline.add(rowInline);
 
         markupInline.setKeyboard(rowsInline);
         message.setReplyMarkup(markupInline);
