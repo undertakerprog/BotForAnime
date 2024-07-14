@@ -4,7 +4,7 @@ public class Anime {
     public Anime(String animeUrl, String animeTitle) {
         this.animeUrl = animeUrl;
         this.animeTitle = animeTitle;
-        this.lastEpisode = "";
+        this.lastEpisodeUrl = "";
     }
 
     public String getAnimeUrl() {
@@ -23,15 +23,15 @@ public class Anime {
         this.animeTitle = animeTitle;
     }
 
-    public String getLastEpisode() {
-        return lastEpisode;
+    public String getLastEpisodeUrl() {
+        return lastEpisodeUrl;
     }
 
-    public void setLastEpisode(String lastEpisode) {
-        this.lastEpisode = lastEpisode;
+    public void setLastEpisodeUrl(String lastEpisodeUrl) {
+        this.lastEpisodeUrl = lastEpisodeUrl;
     }
 
     private String animeUrl;
     private String animeTitle;
-    private String lastEpisode;
+    private String lastEpisodeUrl;
 }

@@ -7,9 +7,7 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class SeriesNotifier {
@@ -25,8 +23,6 @@ public class SeriesNotifier {
         try {
             Document doc = Jsoup.connect(url).get();
 
-            Elements episodeLinks = doc.select("a.short-btn.black.video.the_hildi, a.short-btn.green.video.the_hildi");
-
             String seriesTitle = doc.selectFirst("h1.header_video.allanimevideo.anime_padding_for_title").text();
 
             Anime anime = animeMap.get(url);
@@ -35,30 +31,45 @@ public class SeriesNotifier {
                 animeMap.put(url, anime);
             }
 
-            String lastEpisode = anime.getLastEpisode();
-
+            String lastEpisodeUrl = anime.getLastEpisodeUrl();
+            String latestEpisodeTitle = null;
             String episodeUrlString = null;
-            if (!episodeLinks.isEmpty()) {
-                Element latestEpisodeLink = episodeLinks.first();
-                String latestEpisodeTitle = latestEpisodeLink.text();
-                String href = latestEpisodeLink.attr("href");
+
+            Elements allLinks = doc.select("a.short-btn.video.the_hildi");
+
+            boolean foundFilmSection = false;
+
+            for (Element link : allLinks) {
+                String linkText = link.text();
+                String href = link.attr("href");
                 URL fullUrl = new URL(url);
                 URL episodeUrl = new URL(fullUrl, href);
-                episodeUrlString = episodeUrl.toString();
 
-                if (!latestEpisodeTitle.equals(lastEpisode)) {
-                    String message = "Новая серия: " + latestEpisodeTitle + "\nСсылка: " + episodeUrlString;
-                    if (telegramBot != null) {
-                        telegramBot.sendMessage(CHAT_ID, message);
-                    }
-                    anime.setLastEpisode(latestEpisodeTitle);
-                    animeMap.put(url, anime);
+                if (linkText.contains("Полнометражные фильмы")) {
+                    foundFilmSection = true;
+                    break;
+                }
+
+                if (!linkText.toLowerCase().contains("фильм")) {
+                    latestEpisodeTitle = linkText;
+                    episodeUrlString = episodeUrl.toString();
                 }
             }
-            System.out.println(anime.getLastEpisode());
+
+            if (!foundFilmSection && latestEpisodeTitle != null && !latestEpisodeTitle.equals(lastEpisodeUrl)) {
+                String message = "Новая серия: " + latestEpisodeTitle + "\nСсылка: " + episodeUrlString;
+                if (telegramBot != null) {
+                    telegramBot.sendMessage(CHAT_ID, message);
+                }
+                anime.setLastEpisodeUrl(latestEpisodeTitle);
+                animeMap.put(url, anime);
+            }
+
+            System.out.println(anime.getLastEpisodeUrl());
             System.out.println(episodeUrlString);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
 }

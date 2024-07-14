@@ -6,11 +6,11 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
-import javax.annotation.PostConstruct;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 public class App {
-
     @Bean
     public MyTelegramBot myTelegramBot() throws TelegramApiException {
 
@@ -30,7 +30,21 @@ public class App {
 
     public static void main(String[] args) {
         org.springframework.boot.SpringApplication.run(App.class, args);
-        String animeUrl = "https://jut.su/tokidoki-alya/";
-        SeriesNotifier.checkForNewEpisodes(animeUrl);
+        List<String> animeUrls = Arrays.asList(
+                "https://jut.su/oneepiece/",
+                "https://jut.su/hunter-hunter/",
+                "https://jut.su/tokushu/",
+                "https://jut.su/fullmeetal-alchemist/",
+                "https://jut.su/boku-hero-academia/",
+                "https://jut.su/re-zerou-kara/",
+                "https://jut.su/haaikyu/",
+                "https://jut.su/kime-no-yaiba/"
+
+        );
+
+        // Проверка новых эпизодов для каждой ссылки
+        for (String animeUrl : animeUrls) {
+            SeriesNotifier.checkForNewEpisodes(animeUrl);
+        }
     }
 }
