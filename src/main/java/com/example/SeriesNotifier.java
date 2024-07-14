@@ -33,7 +33,7 @@ public class SeriesNotifier {
 
             String lastEpisodeUrl = anime.getLastEpisodeUrl();
             String latestEpisodeTitle = null;
-            String episodeUrlString = null;
+            String latestEpisodeUrl = null;
 
             Elements allLinks = doc.select("a.short-btn.video.the_hildi");
 
@@ -52,24 +52,54 @@ public class SeriesNotifier {
 
                 if (!linkText.toLowerCase().contains("фильм")) {
                     latestEpisodeTitle = linkText;
-                    episodeUrlString = episodeUrl.toString();
+                    latestEpisodeUrl = episodeUrl.toString();
                 }
             }
 
-            if (!foundFilmSection && latestEpisodeTitle != null && !latestEpisodeTitle.equals(lastEpisodeUrl)) {
-                String message = "Новая серия: " + latestEpisodeTitle + "\nСсылка: " + episodeUrlString;
+            if (!foundFilmSection && latestEpisodeUrl != null && !latestEpisodeUrl.equals(lastEpisodeUrl)) {
+                String message = "Новая серия: " + latestEpisodeTitle + "\nСсылка: " + latestEpisodeUrl;
                 if (telegramBot != null) {
                     telegramBot.sendMessage(CHAT_ID, message);
                 }
-                anime.setLastEpisodeUrl(latestEpisodeTitle);
+                anime.setLastEpisodeUrl(latestEpisodeUrl);
                 animeMap.put(url, anime);
             }
-
-            System.out.println(anime.getLastEpisodeUrl());
-            System.out.println(episodeUrlString);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+    public static String getLastEpisodeUrl(String url) {
+        try {
+            Document doc = Jsoup.connect(url).get();
 
+            Elements allLinks = doc.select("a.short-btn.video.the_hildi");
+
+            boolean foundFilmSection = false;
+            String latestEpisodeUrl = null;
+
+            for (Element link : allLinks) {
+                String linkText = link.text();
+                String href = link.attr("href");
+                URL fullUrl = new URL(url);
+                URL episodeUrl = new URL(fullUrl, href);
+
+                if (linkText.contains("Полнометражные фильмы")) {
+                    foundFilmSection = true;
+                    break;
+                }
+
+                if (!linkText.toLowerCase().contains("фильм")) {
+                    latestEpisodeUrl = episodeUrl.toString();
+                }
+            }
+
+            if (!foundFilmSection && latestEpisodeUrl != null) {
+                return latestEpisodeUrl;
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

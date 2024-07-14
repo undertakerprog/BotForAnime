@@ -68,7 +68,6 @@ public class MyTelegramBot extends TelegramLongPollingBot {
         editMarkup.setChatId(chatId);
         editMarkup.setMessageId(messageId);
 
-        // Create an empty keyboard
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         markupInline.setKeyboard(new ArrayList<>());
 
@@ -158,14 +157,10 @@ public class MyTelegramBot extends TelegramLongPollingBot {
             int messageId = update.getCallbackQuery().getMessage().getMessageId();
 
             if (callbackData.startsWith("add_favorite")) {
-                if (this.currentAnime != null) {
-                    String animeTitleForFavorite = this.currentAnime.getAnimeTitle();
-                    String animeUrlForFavorite = this.currentAnime.getAnimeUrl();
-                    addFavoriteAnime(chatId, animeTitleForFavorite, animeUrlForFavorite);
-                    clearInlineKeyboard(chatId, messageId);
-                } else {
-                    System.err.println("currentAnime is null. Cannot add to favorites.");
-                }
+                String animeTitleForFavorite = this.currentAnime.getAnimeTitle();
+                String animeUrlForFavorite = this.currentAnime.getAnimeUrl();
+                addFavoriteAnime(chatId, animeTitleForFavorite, animeUrlForFavorite);
+                clearInlineKeyboard(chatId, messageId);
             }
             else if (callbackData.startsWith("not_this_anime")) {
                 sendMessage(chatId, "Пожалуйста попробуйте еще раз и уточните название аниме " +
@@ -176,9 +171,10 @@ public class MyTelegramBot extends TelegramLongPollingBot {
                 editFavorite(chatId, messageId);
             }
             else if (callbackData.startsWith("remove_favorite_")) {
+                String animeUrlForRemove = this.currentAnime.getAnimeUrl();
                 String callbackHash = callbackData.substring("remove_favorite_".length());
                 String animeTitleForRemove = animeHashMap.get("remove_favorite_" + callbackHash);
-                removeFavoriteAnime(chatId, animeTitleForRemove);
+                removeFavoriteAnime(chatId, animeTitleForRemove, animeUrlForRemove);
             }
             else if (callbackData.startsWith("remove_all_favorite")) {
                 removeAllFavorite(chatId);
@@ -269,14 +265,19 @@ public class MyTelegramBot extends TelegramLongPollingBot {
     }
 
     private void addFavoriteAnime(String chatId, String animeTitle, String animeUrl) {
+        this.currentAnime = new Anime(animeUrl, animeTitle);
         User user = getUser(chatId);
         user.addFavorite(animeTitle, animeUrl);
+        String lastEpisode = SeriesNotifier.getLastEpisodeUrl(animeUrl);
+        currentAnime.setLastEpisodeUrl(lastEpisode);
+        user.getLastEpisodes().put(animeUrl, lastEpisode);
+        user.saveUserToDynamoDb();
         sendMessage(chatId, "Аниме: " + animeTitle + " добавлено в избранное, ссылка: " + animeUrl);
     }
 
-    private void removeFavoriteAnime(String chatId, String animeTitle) {
+    private void removeFavoriteAnime(String chatId, String animeTitle, String animeUrl) {
         User user = getUser(chatId);
-        user.removeFavorite(animeTitle);
+        user.removeFavorite(animeTitle, animeUrl);
         sendMessage(chatId, "Аниме \"" + animeTitle + "\" удалено из избранного.");
         sendFavoriteList(chatId);
     }
