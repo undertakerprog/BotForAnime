@@ -20,14 +20,14 @@ public class App {
 
             botsApi.registerBot(myTelegramBot);
 
-            List<String> animeUrls = Arrays.asList(
-                    "https://jut.su/hunter-hunter/",
-                    "https://jut.su/tokushu/"
-            );
-
-            for (String animeUrl : animeUrls) {
-                SeriesNotifier.checkForNewEpisodes(animeUrl);
-            }
+//            List<String> animeUrls = Arrays.asList(
+//                    "https://jut.su/hunter-hunter/",
+//                    "https://jut.su/tokushu/"
+//            );
+//
+//            for (String animeUrl : animeUrls) {
+//                SeriesNotifier.checkForNewEpisodes(animeUrl);
+//            }
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
