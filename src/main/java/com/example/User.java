@@ -65,7 +65,7 @@ public class User {
                 .tableName("User")
                 .key(Map.of("UserId", AttributeValue.builder().s(userId).build()))
                 .updateExpression("SET FavoriteAnime = :fa")
-                .expressionAttributeValues(expressionAttributeValues) // Add expressionAttributeValues here
+                .expressionAttributeValues(expressionAttributeValues)
                 .build();
 
         dynamoDb.updateItem(request);
