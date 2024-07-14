@@ -29,7 +29,6 @@ import java.util.regex.Pattern;
 public class MyTelegramBot extends TelegramLongPollingBot {
     private final String botUsername;
     private final String botToken;
-    private final Map<String, String> favoriteAnime = new HashMap<>();
     private boolean waitingForAnime = false;
     private Anime currentAnime;
     private Map<String, String> animeHashMap = new HashMap<>();
