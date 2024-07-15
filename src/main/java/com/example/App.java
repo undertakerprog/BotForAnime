@@ -4,8 +4,6 @@ import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
-import java.util.Arrays;
-import java.util.List;
 
 public class App {
     public static void main(String[] args) {
@@ -20,14 +18,8 @@ public class App {
 
             botsApi.registerBot(myTelegramBot);
 
-//            List<String> animeUrls = Arrays.asList(
-//                    "https://jut.su/hunter-hunter/",
-//                    "https://jut.su/tokushu/"
-//            );
-//
-//            for (String animeUrl : animeUrls) {
-//                SeriesNotifier.checkForNewEpisodes(animeUrl);
-//            }
+            SeriesNotifierScheduler.startScheduler();
+
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
