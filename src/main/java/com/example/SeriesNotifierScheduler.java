@@ -8,6 +8,6 @@ public class SeriesNotifierScheduler {
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public static void startScheduler() {
-        scheduler.scheduleAtFixedRate(SeriesNotifier::checkForNewEpisodes, 0, 2, TimeUnit.MINUTES);
+        scheduler.scheduleAtFixedRate(SeriesNotifier::checkForNewEpisodes, 0, 10, TimeUnit.MINUTES);
     }
 }
